@@ -1,0 +1,178 @@
+# ThanosDecryptor
+
+ThanosDecryptor is an project to decrypt files decrypted by Thanos ransomware.
+
+## Command Arguments
+```
+Usage of ./thanos_decrypt:
+  -c    Use current tickcount. (only support in Windows)
+  -e string
+        Search file extension.
+  -i string
+        Input encrypted file.
+  -k string
+        Decrypt with this key.
+  -o string
+        Output decrypted file.
+  -p int
+        Use n thread. (default 1)
+  -r    Reversed tickcount.
+  -s string
+        Custom search with regular expression.
+  -t int
+        Start tickcount. (default 0)
+```
+
+## Usage
+### Guess password
+Guess the password of a png image from tickcount 0.
+```bash
+./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16
+```
+
+In this command, there are 4 arguments:
+- i: input encrypted file
+- o: output file
+- e: search file format
+- p: thread count
+
+### Reversed Tickcount
+Guess the password of a png image from tickcount 100000 in reversed order.
+```bash
+./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -t 100000 -r
+```
+
+There are 2 additional arguments:
+- t: start from 100000
+- r: reversed order (100000...0)
+
+### Decrypt (Encrypt) with a key
+Decrypt (Encrypt) a file with a provided key.
+```bash
+./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
+```
+
+There is a additional argument:
+- k: provided key
+
+### Guess password with custom format
+Guess the password of a text file with a known string "we had another great".
+```bash
+./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+```
+
+There is a additional argument:
+- s: regular expression to match the decrypted file
+
+### Output
+The output should like this. Since we match the file with magic number, it might be matched even a wrong key is provided. Therefore, we keep the decryption process continued to guess. You can terminate it anytime if you find the correct decrypted file.
+```bash
+ % ./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+ Decrypt file with seed 615750, key: +@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4, path: ./output/615750_test.txt
+ 2795306...
+```
+
+## Build
+```bash
+make win32    # windows 32 bits
+make win64    # windows 64 bits
+make linux    # linux
+```
+
+## Supported File Format
+We match the magic number with https://github.com/h2non/filetype. 
+Here is the file type we currently support:
+
+### Image
+
+- **jpg** - `image/jpeg`
+- **png** - `image/png`
+- **gif** - `image/gif`
+- **webp** - `image/webp`
+- **cr2** - `image/x-canon-cr2`
+- **tif** - `image/tiff`
+- **bmp** - `image/bmp`
+- **heif** - `image/heif`
+- **jxr** - `image/vnd.ms-photo`
+- **psd** - `image/vnd.adobe.photoshop`
+- **ico** - `image/vnd.microsoft.icon`
+- **dwg** - `image/vnd.dwg`
+
+### Video
+
+- **mp4** - `video/mp4`
+- **m4v** - `video/x-m4v`
+- **mkv** - `video/x-matroska`
+- **webm** - `video/webm`
+- **mov** - `video/quicktime`
+- **avi** - `video/x-msvideo`
+- **wmv** - `video/x-ms-wmv`
+- **mpg** - `video/mpeg`
+- **flv** - `video/x-flv`
+- **3gp** - `video/3gpp`
+
+### Audio
+
+- **mid** - `audio/midi`
+- **mp3** - `audio/mpeg`
+- **m4a** - `audio/m4a`
+- **ogg** - `audio/ogg`
+- **flac** - `audio/x-flac`
+- **wav** - `audio/x-wav`
+- **amr** - `audio/amr`
+- **aac** - `audio/aac`
+
+### Archive
+
+- **epub** - `application/epub+zip`
+- **zip** - `application/zip`
+- **tar** - `application/x-tar`
+- **rar** - `application/vnd.rar`
+- **gz** - `application/gzip`
+- **bz2** - `application/x-bzip2`
+- **7z** - `application/x-7z-compressed`
+- **xz** - `application/x-xz`
+- **zstd** - `application/zstd`
+- **pdf** - `application/pdf`
+- **exe** - `application/vnd.microsoft.portable-executable`
+- **swf** - `application/x-shockwave-flash`
+- **rtf** - `application/rtf`
+- **iso** - `application/x-iso9660-image`
+- **eot** - `application/octet-stream`
+- **ps** - `application/postscript`
+- **sqlite** - `application/vnd.sqlite3`
+- **nes** - `application/x-nintendo-nes-rom`
+- **crx** - `application/x-google-chrome-extension`
+- **cab** - `application/vnd.ms-cab-compressed`
+- **deb** - `application/vnd.debian.binary-package`
+- **ar** - `application/x-unix-archive`
+- **Z** - `application/x-compress`
+- **lz** - `application/x-lzip`
+- **rpm** - `application/x-rpm`
+- **elf** - `application/x-executable`
+- **dcm** - `application/dicom`
+
+### Documents
+
+- **doc** - `application/msword`
+- **docx** - `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- **xls** - `application/vnd.ms-excel`
+- **xlsx** - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- **ppt** - `application/vnd.ms-powerpoint`
+- **pptx** - `application/vnd.openxmlformats-officedocument.presentationml.presentation`
+
+### Font
+
+- **woff** - `application/font-woff`
+- **woff2** - `application/font-woff`
+- **ttf** - `application/font-sfnt`
+- **otf** - `application/font-sfnt`
+
+### Application
+
+- **wasm** - `application/wasm`
+- **dex** - `application/vnd.android.dex`
+- **dey** - `application/vnd.android.dey`
+
+## How it work ?
+Thanos ransomware use salsa20 with a tickcount-based random password to encrypt. The size of the random password is 32 bytes, and every character is visible character. Since the password use tickcount as the key, we can guess it brutally.
