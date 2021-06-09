@@ -65,6 +65,7 @@ func main(){
   threadCount := flag.Int("p", 1, "Use n thread.")
   format := flag.String("e", "", "Search file extension.")
   customSearch := flag.String("s", "", "Custom search with regular expression.")
+  bytesFormat := flag.String("b", "", "Custom search with byte value. (i.e. \\xde\\xad\\xbe\\xef -> deadbeef)\nPlease use ?? to match any byte (i.e. de??beef)")
   flag.Parse()
 
   if *inputFile == "" || *outputFile == "" {
@@ -87,10 +88,12 @@ func main(){
   } else {            // guess key
     if *threadCount <= 0 {
       log.Fatal("Please provide a positive integer.")
-    } else if *format == "" && *customSearch == "" {
-      log.Fatal("Please provide a possible file extension.")
-    } else if *customSearch == "" && !filetype.IsSupported(*format) {
+    } else if *format == "" && *customSearch == "" && *bytesFormat == "" {
+      log.Fatal("Please provide a possible file extension or custom search string.")
+    } else if *customSearch == "" && *bytesFormat == "" && !filetype.IsSupported(*format) {
       log.Fatal("Unsupported format. Please provide a custom search regular expression with -s.")
+    } else if len(*bytesFormat) % 2 == 1 {
+      log.Fatal("Lemgth of bytes format should be a multiple of 2.")
     }
 
     if *startTick < 0 {
@@ -105,7 +108,7 @@ func main(){
     }
 
     // build examine
-    exam := examine.Init(*format, *customSearch)
+    exam := examine.Init(*format, *customSearch, *bytesFormat)
 
     // Read input file
     file, err := ioutil.ReadFile(*inputFile)

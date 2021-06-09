@@ -5,6 +5,9 @@ ThanosDecryptor is an project to decrypt files decrypted by Thanos ransomware.
 ## Command Arguments
 ```
 Usage of ./thanos_decrypt:
+  -b string
+        Custom search with byte value. (i.e. \xde\xad\xbe\xef -> deadbeef)
+        Please use ?? to match any byte (i.e. de??beef)
   -c    Use current tickcount. (only support in Windows)
   -e string
         Search file extension.
@@ -46,23 +49,47 @@ There are 2 additional arguments:
 - t: start from 100000
 - r: reversed order (100000...0)
 
+### Guess from current tickcount (only for Windows)
+Guess the password of a png image from the current tickcount in reversed order. This feature is usually used with reversed order.
+```bash
+./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -c -r
+```
+
+There is an additional argument:
+- c: start from the current tickcount
+
 ### Decrypt (Encrypt) with a key
 Decrypt (Encrypt) a file with a provided key.
 ```bash
 ./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
 ```
 
-There is a additional argument:
+There is an additional argument:
 - k: provided key
 
-### Guess password with custom format
+### Guess password with custom format (regular expression)
 Guess the password of a text file with a known string "we had another great".
 ```bash
 ./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
 ```
 
-There is a additional argument:
+There is an additional argument:
 - s: regular expression to match the decrypted file
+
+### Guess password with custom format (bytes pattern)
+Guess the password of a png file with its header in hex.
+```bash
+./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
+```
+
+There is an additional argument:
+- b: PNG header in hex format.
+  - The full bytes are "8950 4e47 0d0a 1a0a 0000".
+  - We can use ?? to match any byte.
+
+Custom search with bytes pattern is much more convenient than regular expression, since there are lots of file format that it can't be performed by visible characters.
+
+
 
 ### Output
 The output should like this. Since we match the file with magic number, it might be matched even a wrong key is provided. Therefore, we keep the decryption process continued to guess. You can terminate it anytime if you find the correct decrypted file.

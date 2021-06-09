@@ -8,18 +8,19 @@ import(
 type TypeExam struct {
   re    *regexp.Regexp
   ext   string
+  bytes string
 }
 
-func Init(ext, format string) *TypeExam {
+func Init(ext, format, bytes string) *TypeExam {
   if format == "" {
-    return &TypeExam{re: nil, ext: ext}
+    return &TypeExam{re: nil, ext: ext, bytes: bytes}
   }
 
-  return &TypeExam{re: regexp.MustCompile(format), ext: ext}
+  return &TypeExam{re: regexp.MustCompile(format), ext: ext, bytes: bytes}
 }
 
 func (exam *TypeExam) Match(data []byte) bool {
-  extFound, reFound := true, true
+  extFound, reFound, bytesFound := true, true, true
 
   if exam.ext != "" {
     extFound = filetype.Is(data, exam.ext)
@@ -29,7 +30,11 @@ func (exam *TypeExam) Match(data []byte) bool {
     reFound = exam.re.Match(data)
   }
 
-  return extFound && reFound && exam.matchExt(data)
+  if exam.bytes != "" {
+    bytesFound = matchBytes(data, exam.bytes)
+  }
+
+  return extFound && reFound && bytesFound && exam.matchExt(data)
 }
 
 // For examine extension
