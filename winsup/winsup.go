@@ -5,7 +5,6 @@ package winsup
 import(
   "syscall"
   "log"
-  "unsafe"
 )
 
 func GetTickCount() int {
@@ -15,14 +14,15 @@ func GetTickCount() int {
   }
   defer syscall.FreeLibrary(kernel32)
 
-  kernel32GetTickCount, _ := syscall.GetProcAddress(kernel32, "GetTickCount")
+  kernel32GetTickCount, err := syscall.GetProcAddress(kernel32, "GetTickCount")
   if err != nil {
     log.Fatal(err)
   }
 
-  tick, _, err := syscall.Syscall(uintptr(kernel32GetTickCount), 0, 0, 0, 0)
-  if err != nil {
+  tick, _, errno := syscall.Syscall(uintptr(kernel32GetTickCount), 0, 0, 0, 0)
+  if errno != 0 {
     log.Fatal(err)
   }
-  return int(*(*uint64)(unsafe.Pointer(tick)))
+
+  return int(tick)
 }
