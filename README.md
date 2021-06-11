@@ -3,7 +3,7 @@
 
 # ThanosDecryptor
 
-ThanosDecryptor is an project to decrypt files decrypted by Thanos ransomware.
+ThanosDecryptor is an project to decrypt files encrypted by Thanos ransomware.
 
 ## Command Arguments
 ```
