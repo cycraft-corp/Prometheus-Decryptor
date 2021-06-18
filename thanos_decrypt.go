@@ -34,10 +34,21 @@ import(
   "io/ioutil"
   "log"
   "math"
-  "flag"
   "path/filepath"
 )
 
+type decOption struct {
+  inputFile     string
+  outputFile    string
+  startTick     int
+  reversed      bool
+  useCurTick    bool
+  key           string
+  threadCount   int
+  format        string
+  customSearch  string
+  bytesFormat   string
+}
 
 func genKey(seed int32) [32]byte {
   var key [32]byte
@@ -79,80 +90,68 @@ func decRoutine(jobs chan int32, result chan bool, file []byte, output string, e
   }
 }
 
-func main(){
-  inputFile := flag.String("i", "", "Input encrypted file.")
-  outputFile := flag.String("o", "", "Output decrypted file.")
-  startTick := flag.Int("t", 0, "Start tickcount. (default 0)")
-  reversed := flag.Bool("r", false, "Reversed tickcount.")
-  useCurTick := flag.Bool("c", false, "Use current tickcount. (only support in Windows)")
-  key := flag.String("k", "", "Decrypt with this key.")
-  threadCount := flag.Int("p", 1, "Use n thread.")
-  format := flag.String("e", "", "Search file extension.")
-  customSearch := flag.String("s", "", "Custom search with regular expression.")
-  bytesFormat := flag.String("b", "", "Custom search with byte value. (i.e. \\xde\\xad\\xbe\\xef -> deadbeef)\nPlease use ?? to match any byte (i.e. de??beef)")
-  flag.Parse()
-
-  if *inputFile == "" || *outputFile == "" {
+func thanosDecrypt(opt decOption){
+  if opt.inputFile == "" || opt.outputFile == "" {
     log.Fatal("Please provide input file path and output file path")
   }
 
-  if *key != "" {      // decrypt file with the key
-    file, err := ioutil.ReadFile(*inputFile)
+  if opt.key != "" {      // decrypt file with the key
+    file, err := ioutil.ReadFile(opt.inputFile)
     if err != nil {
       log.Fatal(err)
     }
     plain := make([]byte, len(file))
     var key_b [32]byte
-    copy(key_b[:], []byte(*key)[:32])
+    copy(key_b[:], []byte(opt.key)[:32])
     salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key_b)
-    err = ioutil.WriteFile(*outputFile, plain, 0644)
+    err = ioutil.WriteFile(opt.outputFile, plain, 0644)
     if err != nil {
       log.Fatal(err)
     }
   } else {            // guess key
-    if *threadCount <= 0 {
+    if opt.threadCount <= 0 {
       log.Fatal("Please provide a positive integer.")
-    } else if *format == "" && *customSearch == "" && *bytesFormat == "" {
+    } else if opt.format == "" && opt.customSearch == "" && opt.bytesFormat == "" {
       log.Fatal("Please provide a possible file extension or custom search string.")
-    } else if *customSearch == "" && *bytesFormat == "" && !filetype.IsSupported(*format) {
+    } else if opt.customSearch == "" && opt.bytesFormat == "" && !filetype.IsSupported(opt.format) {
       log.Fatal("Unsupported format. Please provide a custom search regular expression with -s.")
-    } else if len(*bytesFormat) % 2 == 1 {
+    } else if len(opt.bytesFormat) % 2 == 1 {
       log.Fatal("Lemgth of bytes format should be a multiple of 2.")
     }
 
-    if *startTick < 0 {
-      *startTick = - *startTick
+    if opt.startTick < 0 {
+      opt.startTick = - opt.startTick
     }
-    if *startTick > math.MaxInt32 {
+    if opt.startTick > math.MaxInt32 {
       log.Fatal("Tick count should between -2147483648 and 2147483648.")
     }
 
-    if *useCurTick {
-      *startTick = winsup.GetTickCount()
+    if opt.useCurTick {
+      opt.startTick = winsup.GetTickCount()
     }
 
     // build examine
-    exam := examine.Init(*format, *customSearch, *bytesFormat)
+    exam := examine.Init(opt.format, opt.customSearch, opt.bytesFormat)
 
     // Read input file
-    file, err := ioutil.ReadFile(*inputFile)
+    file, err := ioutil.ReadFile(opt.inputFile)
     if err != nil {
       log.Fatal(err)
     }
 
     // start worker
-    jobs := make(chan int32, *threadCount)
-    result := make(chan bool, *threadCount)
-    for i:=0; i<*threadCount; i++ {
-      go decRoutine(jobs, result, file, *outputFile, exam)
+    jobs := make(chan int32, opt.threadCount)
+    result := make(chan bool, opt.threadCount)
+    for i:=0; i<opt.threadCount; i++ {
+      go decRoutine(jobs, result, file, opt.outputFile, exam)
     }
 
     // send job (seed)
     go func(){
-      for i:=*startTick;; {
+      for i:=opt.startTick;; {
         jobs<-int32(i)
 
-        if *reversed {
+        if opt.reversed {
           i--
           if i < 0 {
             break
@@ -168,10 +167,10 @@ func main(){
     }()
 
     // wait for job
-    for i:=*startTick;; {
+    for i:=opt.startTick;; {
       <-result
 
-      if *reversed {
+      if opt.reversed {
         i--
         if i < 0 {
           break
@@ -185,3 +184,5 @@ func main(){
     }
   }
 }
+
+
