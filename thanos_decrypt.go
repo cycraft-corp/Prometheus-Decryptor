@@ -75,7 +75,7 @@ func writeFile(data []byte, path string, seed int32, key string) error {
 func decRoutine(jobs chan int32, result chan bool, file []byte, output string, exam *examine.TypeExam) {
   plain := make([]byte, len(file))
   for seed := range jobs {
-    fmt.Printf("\r%d", seed)
+    go ctrLogger.Printf("\r%d", seed)
     key := genKey(seed)
     salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
     if exam.Match(plain) {
@@ -92,13 +92,13 @@ func decRoutine(jobs chan int32, result chan bool, file []byte, output string, e
 
 func thanosDecrypt(opt decOption){
   if opt.inputFile == "" || opt.outputFile == "" {
-    log.Fatal("Please provide input file path and output file path")
+    log.Panic("Please provide input file path and output file path")
   }
 
   if opt.key != "" {      // decrypt file with the key
     file, err := ioutil.ReadFile(opt.inputFile)
     if err != nil {
-      log.Fatal(err)
+      log.Panic(err)
     }
     plain := make([]byte, len(file))
     var key_b [32]byte
@@ -106,24 +106,24 @@ func thanosDecrypt(opt decOption){
     salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key_b)
     err = ioutil.WriteFile(opt.outputFile, plain, 0644)
     if err != nil {
-      log.Fatal(err)
+      log.Panic(err)
     }
   } else {            // guess key
     if opt.threadCount <= 0 {
-      log.Fatal("Please provide a positive integer.")
+      log.Panic("Please provide a positive integer.")
     } else if opt.format == "" && opt.customSearch == "" && opt.bytesFormat == "" {
-      log.Fatal("Please provide a possible file extension or custom search string.")
+      log.Panic("Please provide a possible file extension or custom search string.")
     } else if opt.customSearch == "" && opt.bytesFormat == "" && !filetype.IsSupported(opt.format) {
-      log.Fatal("Unsupported format. Please provide a custom search regular expression with -s.")
+      log.Panic("Unsupported format. Please provide a custom search regular expression with -s.")
     } else if len(opt.bytesFormat) % 2 == 1 {
-      log.Fatal("Lemgth of bytes format should be a multiple of 2.")
+      log.Panic("Lemgth of bytes format should be a multiple of 2.")
     }
 
     if opt.startTick < 0 {
       opt.startTick = - opt.startTick
     }
     if opt.startTick > math.MaxInt32 {
-      log.Fatal("Tick count should between -2147483648 and 2147483648.")
+      log.Panic("Tick count should between -2147483648 and 2147483648.")
     }
 
     if opt.useCurTick {
@@ -136,7 +136,7 @@ func thanosDecrypt(opt decOption){
     // Read input file
     file, err := ioutil.ReadFile(opt.inputFile)
     if err != nil {
-      log.Fatal(err)
+      log.Panic(err)
     }
 
     // start worker

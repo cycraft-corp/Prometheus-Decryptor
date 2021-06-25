@@ -30,12 +30,14 @@ import(
   "log"
   "time"
   "math"
+  "strings"
+  "strconv"
 
   "github.com/lxn/walk"
   . "github.com/lxn/walk/declarative"
 )
 
-
+var ctrLogger *log.Logger
 
 type logWritter struct {
   results   *walk.TextEdit
@@ -46,11 +48,28 @@ func (w logWritter) Write(p []byte) (n int, err error) {
   return len(p), nil
 }
 
+type ctrWritter struct {
+  ctrText   *walk.TextLabel
+  lastVal   *int
+}
+
+func (w ctrWritter) Write(p []byte) (n int, err error) {
+  strp := strings.TrimLeft(string(p), "\r")
+  strp = strings.TrimRight(strp, "\n")
+  intp, err := strconv.Atoi(strp)
+  if (intp / 1000) != *w.lastVal {
+    *w.lastVal = intp / 1000
+    w.ctrText.SetText(strconv.Itoa(intp/1000) + "000...")
+  }
+  return len(p), nil
+}
+
 type mainWindow struct {
   *walk.MainWindow
   inputFile     *walk.LineEdit
   outputFile    *walk.LineEdit
   results       *walk.TextEdit
+  counter       *walk.TextLabel
   // tickcount
   useCurTick    *walk.CheckBox
   startTick     *walk.CheckBox
@@ -111,7 +130,13 @@ func (mw *mainWindow) selectStartTick(){
 
 func (mw *mainWindow) decrypt(){
   mw.opt.inputFile = mw.inputFile.Text()
+  if mw.opt.inputFile == "Input file" {
+    mw.opt.inputFile = ""
+  }
   mw.opt.outputFile = mw.outputFile.Text()
+  if mw.opt.outputFile == "Output file" {
+    mw.opt.outputFile = ""
+  }
   if mw.startTick.CheckState() == walk.CheckChecked {
     mw.opt.startTick = int(mw.startTickNum.Value())
   }
@@ -137,7 +162,13 @@ func (mw *mainWindow) decrypt(){
     mw.opt.bytesFormat = mw.searchBytes.Text()
   }
 
-  go thanosDecrypt(mw.opt)
+  go func(){
+    defer func(){
+      // abandon panic to prevent process exit
+      recover()
+    }()
+    thanosDecrypt(mw.opt)
+  }()
 }
 
 
@@ -157,8 +188,9 @@ func main(){
 
   // log to results (set after run)
   go func(){
-    time.Sleep(time.Second)
+    time.Sleep(3 * time.Second)
     log.SetOutput(logWritter{mw.results})
+    ctrLogger = log.New(ctrWritter{mw.counter, new(int)}, "", 0)
   }()
 
   // mainWindow
@@ -346,14 +378,25 @@ func main(){
         },
       },
       // Decrypt
-      PushButton{
-        Text: "Decrypt",
-        OnClicked: mw.decrypt,
+      Composite{
+        Layout: HBox{},
+        Children: []Widget{
+          PushButton{
+            Text: "Decrypt",
+            OnClicked: mw.decrypt,
+          },
+          TextLabel{
+            AssignTo: &mw.counter,
+          },
+        },
       },
       // result
       TextEdit{
 	      AssignTo: &mw.results,
         ReadOnly: true,
+        HScroll: true,
+        VScroll: true,
+        MinSize: Size{Height: 200},
       },
     },
   }.Run()); err != nil {

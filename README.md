@@ -102,11 +102,27 @@ The output should like this. Since we match the file with magic number, it might
  2795306...
 ```
 
+### GUI
+We provide a GUI version for windows users. All features is supported in the GUI version. If you know nothing about programming, please follow the steps below to decrypt your files:
+
+1. Choose a file to decrypt.
+2. Choose the output file name.
+3. Select "Use thread" and fill in 16. (Threads usually make the decryption routine faster, but it actually depends on amount of your cpu cores)
+4. Select "Search extension" and fill in your file type. (For instance, PNG)
+5. Click decrypt.
+6. There is a counter, which shows the current guessing tickcount.
+7. The decrypting result will show in the text block below. (There may be multiple possible key, so the decryption routine will continue to decrypt even find a possible key. You can terminate it at any time.)
+8. Since the tickcounts (seeds) used to encrypt are near, you can try to record the seed above and select "Start tickcount" with value `seed-10000` next time. It may be faster.
+
+![GUI](/GUI.jpg?raw=true)
+
 ## Build
 ```bash
 make win32    # windows 32 bits
 make win64    # windows 64 bits
 make linux    # linux
+make win32GUI # windows 32 bits GUI (built on windows)
+make win64GUI # windows 64 bits GUI (build on windows)
 ```
 
 ## Supported File Format
