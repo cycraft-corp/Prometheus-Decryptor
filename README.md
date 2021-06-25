@@ -114,7 +114,7 @@ We provide a GUI version for windows users. All features is supported in the GUI
 7. The decrypting result will show in the text block below. (There may be multiple possible key, so the decryption routine will continue to decrypt even find a possible key. You can terminate it at any time.)
 8. Since the tickcounts (seeds) used to encrypt are near, you can try to record the seed above and select "Start tickcount" with value `seed-10000` next time. It may be faster.
 
-![GUI](/GUI.jpg?raw=true)
+![GUI](https://raw.githubusercontent.com/cycraft-corp/ThanosDecryptor/master/GUI.png)
 
 ## Build
 ```bash
