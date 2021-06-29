@@ -167,7 +167,7 @@ func (mw *mainWindow) decrypt(){
       // abandon panic to prevent process exit
       recover()
     }()
-    thanosDecrypt(mw.opt)
+    prometheusDecrypt(mw.opt)
   }()
 }
 
@@ -196,7 +196,7 @@ func main(){
   // mainWindow
   if _, err := (MainWindow{
     AssignTo: &mw.MainWindow,
-    Title:    "Thanos Decrypt",
+    Title:    "Prometheus Decrypt",
     MinSize:  Size{600, 400},
     Layout:   VBox{},
     Children: []Widget{

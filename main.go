@@ -71,7 +71,7 @@ func main(){
     recover()
   }()
 
-  thanosDecrypt(decOption{
+  prometheusDecrypt(decOption{
     inputFile:    *inputFile,
     outputFile:   *outputFile,
     startTick:    *startTick,

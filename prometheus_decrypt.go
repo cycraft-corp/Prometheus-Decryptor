@@ -27,9 +27,9 @@ package main
 import(
   "golang.org/x/crypto/salsa20"
   "github.com/h2non/filetype"
-  "thanos_decrypt/csharp_random"
-  "thanos_decrypt/examine"
-  "thanos_decrypt/winsup"
+  "prometheus_decrypt/csharp_random"
+  "prometheus_decrypt/examine"
+  "prometheus_decrypt/winsup"
   "fmt"
   "io/ioutil"
   "log"
@@ -90,7 +90,7 @@ func decRoutine(jobs chan int32, result chan bool, file []byte, output string, e
   }
 }
 
-func thanosDecrypt(opt decOption){
+func prometheusDecrypt(opt decOption){
   if opt.inputFile == "" || opt.outputFile == "" {
     log.Panic("Please provide input file path and output file path")
   }

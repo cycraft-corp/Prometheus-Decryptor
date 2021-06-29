@@ -1,13 +1,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](http://golang.org)
 
-# ThanosDecryptor
+# Prometheus-Decryptor
 
-ThanosDecryptor is an project to decrypt files encrypted by Thanos ransomware.
+Prometheus-Decryptor is an project to decrypt files encrypted by Prometheus ransomware.
 
 ## Command Arguments
 ```
-Usage of ./thanos_decrypt:
+Usage of ./prometheus_drcrypt:
   -b string
         Custom search with byte value. (i.e. \xde\xad\xbe\xef -> deadbeef)
         Please use ?? to match any byte (i.e. de??beef)
@@ -33,7 +33,7 @@ Usage of ./thanos_decrypt:
 ### Guess password
 Guess the password of a png image from tickcount 0.
 ```bash
-./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16
+./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16
 ```
 
 In this command, there are 4 arguments:
@@ -45,7 +45,7 @@ In this command, there are 4 arguments:
 ### Reversed Tickcount
 Guess the password of a png image from tickcount 100000 in reversed order.
 ```bash
-./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -t 100000 -r
+./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -t 100000 -r
 ```
 
 There are 2 additional arguments:
@@ -55,7 +55,7 @@ There are 2 additional arguments:
 ### Guess from current tickcount (only for Windows)
 Guess the password of a png image from the current tickcount in reversed order. This feature is usually used with reversed order.
 ```bash
-./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -c -r
+./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -c -r
 ```
 
 There is an additional argument:
@@ -64,7 +64,7 @@ There is an additional argument:
 ### Decrypt (Encrypt) with a key
 Decrypt (Encrypt) a file with a provided key.
 ```bash
-./thanos_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
+./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
 ```
 
 There is an additional argument:
@@ -73,7 +73,7 @@ There is an additional argument:
 ### Guess password with custom format (regular expression)
 Guess the password of a text file with a known string "we had another great".
 ```bash
-./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
 ```
 
 There is an additional argument:
@@ -82,7 +82,7 @@ There is an additional argument:
 ### Guess password with custom format (bytes pattern)
 Guess the password of a png file with its header in hex.
 ```bash
-./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
+./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
 ```
 
 There is an additional argument:
@@ -97,7 +97,7 @@ Custom search with bytes pattern is much more convenient than regular expression
 ### Output
 The output should like this. Since we match the file with magic number, it might be matched even a wrong key is provided. Therefore, we keep the decryption process continued to guess. You can terminate it anytime if you find the correct decrypted file.
 ```bash
- % ./thanos_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+ % ./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
  Decrypt file with seed 615750, key: +@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4, path: ./output/615750_test.txt
  2795306...
 ```
@@ -114,7 +114,7 @@ We provide a GUI version for windows users. All features is supported in the GUI
 7. The decrypting result will show in the text block below. (There may be multiple possible key, so the decryption routine will continue to decrypt even find a possible key. You can terminate it at any time.)
 8. Since the tickcounts (seeds) used to encrypt are near, you can try to record the seed above and select "Start tickcount" with value `seed-10000` next time. It may be faster.
 
-![GUI](https://raw.githubusercontent.com/cycraft-corp/ThanosDecryptor/master/GUI.png)
+![GUI](https://raw.githubusercontent.com/cycraft-corp/Prometheus-Decryptor/master/GUI.png)
 
 ## Build
 ```bash
@@ -221,4 +221,4 @@ Here is the file type we currently support:
 - **dey** - `application/vnd.android.dey`
 
 ## How it work ?
-Thanos ransomware use salsa20 with a tickcount-based random password to encrypt. The size of the random password is 32 bytes, and every character is visible character. Since the password use tickcount as the key, we can guess it brutally.
+Prometheus ransomware use salsa20 with a tickcount-based random password to encrypt. The size of the random password is 32 bytes, and every character is visible character. Since the password use tickcount as the key, we can guess it brutally.

@@ -1,4 +1,4 @@
-module thanos_decrypt
+module prometheus_decrypt
 
 go 1.15
 

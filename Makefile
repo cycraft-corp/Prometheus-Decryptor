@@ -1,19 +1,19 @@
 win32:
-	GOOS=windows GOARCH=386 go build -tags windows -o thanos_decrypt_32.exe
+	GOOS=windows GOARCH=386 go build -tags windows -o prometheus_decrypt_32.exe
 
 win64:
-	GOOS=windows GOARCH=amd64 go build -tags windows -o thanos_decrypt_64.exe
+	GOOS=windows GOARCH=amd64 go build -tags windows -o prometheus_decrypt_64.exe
 
 linux:
 	GOOS=linux GOARCH=amd64 go build
 
 win32GUI:
 	set GOARCH=386
-	go build -tags windows,gui -ldflags="-H windowsgui -w -s" -o thanos_decrypt_32_GUI.exe
+	go build -tags windows,gui -ldflags="-H windowsgui -w -s" -o prometheus_decrypt_32_GUI.exe
 
 win64GUI:
 	set GOARCH=amd64
-	go build -tags windows,gui -ldflags="-H windowsgui -w -s" -o thanos_decrypt_64_GUI.exe
+	go build -tags windows,gui -ldflags="-H windowsgui -w -s" -o prometheus_decrypt_64_GUI.exe
 
 cross_linux: win32 win64 linux
 
