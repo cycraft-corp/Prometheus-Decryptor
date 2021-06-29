@@ -7,7 +7,7 @@ Prometheus-Decryptor is an project to decrypt files encrypted by Prometheus rans
 
 ## Command Arguments
 ```
-Usage of ./prometheus_drcrypt:
+Usage of ./prometheus_decrypt:
   -b string
         Custom search with byte value. (i.e. \xde\xad\xbe\xef -> deadbeef)
         Please use ?? to match any byte (i.e. de??beef)
@@ -33,7 +33,7 @@ Usage of ./prometheus_drcrypt:
 ### Guess password
 Guess the password of a png image from tickcount 0.
 ```bash
-./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16
+./prometheus_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16
 ```
 
 In this command, there are 4 arguments:
@@ -45,7 +45,7 @@ In this command, there are 4 arguments:
 ### Reversed Tickcount
 Guess the password of a png image from tickcount 100000 in reversed order.
 ```bash
-./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -t 100000 -r
+./prometheus_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -t 100000 -r
 ```
 
 There are 2 additional arguments:
@@ -55,7 +55,7 @@ There are 2 additional arguments:
 ### Guess from current tickcount (only for Windows)
 Guess the password of a png image from the current tickcount in reversed order. This feature is usually used with reversed order.
 ```bash
-./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -c -r
+./prometheus_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -e png -p 16 -c -r
 ```
 
 There is an additional argument:
@@ -64,7 +64,7 @@ There is an additional argument:
 ### Decrypt (Encrypt) with a key
 Decrypt (Encrypt) a file with a provided key.
 ```bash
-./prometheus_drcrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
+./prometheus_decrypt -i ./sample/CyCraft.png.PROM\[prometheushelp@mail.ch\] -o ./output/CyCraft.png -k "+@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4}]]"
 ```
 
 There is an additional argument:
@@ -73,7 +73,7 @@ There is an additional argument:
 ### Guess password with custom format (regular expression)
 Guess the password of a text file with a known string "we had another great".
 ```bash
-./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
 ```
 
 There is an additional argument:
@@ -82,7 +82,7 @@ There is an additional argument:
 ### Guess password with custom format (bytes pattern)
 Guess the password of a png file with its header in hex.
 ```bash
-./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
+./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
 ```
 
 There is an additional argument:
@@ -97,7 +97,7 @@ Custom search with bytes pattern is much more convenient than regular expression
 ### Output
 The output should like this. Since we match the file with magic number, it might be matched even a wrong key is provided. Therefore, we keep the decryption process continued to guess. You can terminate it anytime if you find the correct decrypted file.
 ```bash
- % ./prometheus_drcrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+ % ./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
  Decrypt file with seed 615750, key: +@[%T-mZSh+E[^^i{W:dpwnhdL4<b8D4, path: ./output/615750_test.txt
  2795306...
 ```
