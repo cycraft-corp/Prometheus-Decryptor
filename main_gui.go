@@ -234,7 +234,7 @@ func main(){
               },
             },
           },
-        },   
+        },
       },
       // Option
       GroupBox{
@@ -271,7 +271,7 @@ func main(){
                         AssignTo: &mw.startTickNum,
                       },
                     },
-                  },     
+                  },
                   CheckBox {
                     AssignTo: &mw.useRevTick,
                     Text: "Reversed tickcount",
@@ -397,6 +397,10 @@ func main(){
         HScroll: true,
         VScroll: true,
         MinSize: Size{Height: 200},
+      },
+      TextLabel{
+        Alignment: AlignHFarVCenter,
+        Text: "powered by CyCraft Technology",
       },
     },
   }.Run()); err != nil {
