@@ -162,13 +162,7 @@ func (mw *mainWindow) decrypt(){
     mw.opt.bytesFormat = mw.searchBytes.Text()
   }
 
-  go func(){
-    defer func(){
-      // abandon panic to prevent process exit
-      recover()
-    }()
-    prometheusDecrypt(mw.opt)
-  }()
+  go prometheusDecrypt(mw.opt)
 }
 
 

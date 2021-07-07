@@ -35,6 +35,9 @@ import(
   "log"
   "math"
   "path/filepath"
+  "os"
+  "strings"
+  "sync"
 )
 
 type decOption struct {
@@ -67,88 +70,78 @@ func genKey(seed int32) [32]byte {
 func writeFile(data []byte, path string, seed int32, key string) error {
   dir, file := filepath.Split(path)
   writePath := fmt.Sprintf("%s%d_%s", dir, seed, file)
-  err := ioutil.WriteFile(writePath, data, 0644)
+  // create all dir
+  err := os.MkdirAll(dir, 0755)
+  if err != nil {
+    return err
+  }
+  // write file
+  err = ioutil.WriteFile(writePath, data, 0644)
   log.Printf("\rDecrypt file with seed %d, key: %s, path: %s\n", seed, key, writePath)
   return err
 }
 
-func decRoutine(jobs chan int32, result chan bool, file []byte, output string, exam *examine.TypeExam) {
+func decRoutine(jobs chan int32, result chan int32, file []byte, output string, exam *examine.TypeExam, wg *sync.WaitGroup) {
+  defer wg.Done()
   plain := make([]byte, len(file))
-  for seed := range jobs {
-    go ctrLogger.Printf("\r%d", seed)
-    key := genKey(seed)
-    salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
-    if exam.Match(plain) {
-      err := writeFile(plain, output, seed, string(key[:]))
-      if err != nil {
-        log.Println(err)
+  for{
+    if seed, ok := <-jobs; ok {
+      go ctrLogger.Printf("\r%d", seed)
+      key := genKey(seed)
+      salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
+      if exam.Match(plain) {
+        err := writeFile(plain, output, seed, string(key[:]))
+        if err != nil {
+          log.Println(err)
+        }
+        result<-seed
       }
-      result<-true
     } else {
-      result<-false
+      break
     }
   }
 }
 
-func prometheusDecrypt(opt decOption){
-  if opt.inputFile == "" || opt.outputFile == "" {
-    log.Panic("Please provide input file path and output file path")
+func decWithoutKey(opt decOption, quitCh chan bool) int32 {
+  // catch local error
+  defer func(){
+    // do nothing just return
+    recover()
+  }()
+
+  log.Println("Start decrypt", opt.inputFile)
+
+  // local check
+  if opt.customSearch == "" && opt.bytesFormat == "" && !filetype.IsSupported(opt.format) {
+    log.Panic("Unsupported format. Please provide a custom search regular expression with -s.")
   }
 
-  if opt.key != "" {      // decrypt file with the key
-    file, err := ioutil.ReadFile(opt.inputFile)
-    if err != nil {
-      log.Panic(err)
-    }
-    plain := make([]byte, len(file))
-    var key_b [32]byte
-    copy(key_b[:], []byte(opt.key)[:32])
-    salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key_b)
-    err = ioutil.WriteFile(opt.outputFile, plain, 0644)
-    if err != nil {
-      log.Panic(err)
-    }
-  } else {            // guess key
-    if opt.threadCount <= 0 {
-      log.Panic("Please provide a positive integer.")
-    } else if opt.format == "" && opt.customSearch == "" && opt.bytesFormat == "" {
-      log.Panic("Please provide a possible file extension or custom search string.")
-    } else if opt.customSearch == "" && opt.bytesFormat == "" && !filetype.IsSupported(opt.format) {
-      log.Panic("Unsupported format. Please provide a custom search regular expression with -s.")
-    } else if len(opt.bytesFormat) % 2 == 1 {
-      log.Panic("Lemgth of bytes format should be a multiple of 2.")
-    }
+  // build examine
+  exam := examine.Init(opt.format, opt.customSearch, opt.bytesFormat)
 
-    if opt.startTick < 0 {
-      opt.startTick = - opt.startTick
-    }
-    if opt.startTick > math.MaxInt32 {
-      log.Panic("Tick count should between -2147483648 and 2147483648.")
-    }
+  // Read input file
+  file, err := ioutil.ReadFile(opt.inputFile)
+  if err != nil {
+    log.Panic(err)
+  }
 
-    if opt.useCurTick {
-      opt.startTick = winsup.GetTickCount()
-    }
+  // start worker
+  var wg sync.WaitGroup
+  wg.Add(opt.threadCount)
+  jobs := make(chan int32, opt.threadCount)
+  result := make(chan int32, opt.threadCount)
+  for i:=0; i<opt.threadCount; i++ {
+    go decRoutine(jobs, result, file, opt.outputFile, exam, &wg)
+  }
 
-    // build examine
-    exam := examine.Init(opt.format, opt.customSearch, opt.bytesFormat)
-
-    // Read input file
-    file, err := ioutil.ReadFile(opt.inputFile)
-    if err != nil {
-      log.Panic(err)
-    }
-
-    // start worker
-    jobs := make(chan int32, opt.threadCount)
-    result := make(chan bool, opt.threadCount)
-    for i:=0; i<opt.threadCount; i++ {
-      go decRoutine(jobs, result, file, opt.outputFile, exam)
-    }
-
-    // send job (seed)
-    go func(){
-      for i:=opt.startTick;; {
+  // send job (seed)
+  go func(){
+    end := false
+    for i:=opt.startTick; !end; {
+      select {
+      case <-quitCh:
+        end = true
+      default:
         jobs<-int32(i)
 
         if opt.reversed {
@@ -163,23 +156,140 @@ func prometheusDecrypt(opt decOption){
           }
         }
       }
-      close(jobs)
-    }()
+    }
+    close(jobs)
+  }()
 
-    // wait for job
-    for i:=opt.startTick;; {
-      <-result
+  // wait for job
+  var lastTick int32 = -1
+  go func(){
+    for true {
+      if tick, ok := <-result; ok {
+        lastTick = tick
+      } else {
+        break
+      }
+    }
+  }()
 
-      if opt.reversed {
-        i--
-        if i < 0 {
-          break
+  wg.Wait()
+  close(result)
+
+  return lastTick
+}
+
+func decWithKey(opt decOption){
+  // catch local error
+  defer func(){
+    // do nothing just return
+    recover()
+  }()
+
+  file, err := ioutil.ReadFile(opt.inputFile)
+  if err != nil {
+    log.Panic(err)
+  }
+  plain := make([]byte, len(file))
+  var key_b [32]byte
+  copy(key_b[:], []byte(opt.key)[:32])
+  salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key_b)
+  err = ioutil.WriteFile(opt.outputFile, plain, 0644)
+  if err != nil {
+    log.Panic(err)
+  }
+}
+
+func prometheusDecrypt(opt decOption, quitCh chan bool){
+  // catch global error
+  defer func(){
+    // do nothing just return
+    recover()
+  }()
+
+  if opt.inputFile == "" || opt.outputFile == "" {
+    log.Panic("Please provide input file path and output file path")
+  }
+
+  // check file or dir
+  files := make([]struct{i string; o string}, 0)
+  if fstatI, err := os.Stat(opt.inputFile); err != nil {
+    log.Panic("Open input file failed:", err)
+  } else if fstatI.IsDir() {
+    if fstatO, err := os.Stat(opt.outputFile); err != nil{
+      log.Panic("Open output file failed:", err)
+    } else if !fstatO.IsDir() {
+      log.Panic("Input path and output path type should be the same.")
+    } else {
+      // generate all files in dir
+      err = filepath.Walk(opt.inputFile, func(path string, info os.FileInfo, err error) error {
+          if !info.IsDir() {
+              path = filepath.Base(path)
+              files = append(files, struct{i string; o string}{
+                filepath.Join(opt.inputFile, path),
+                filepath.Join(opt.outputFile, path),
+              })
+          }
+          return nil
+      })
+    }
+  } else {
+    files = append(files, struct{i string; o string}{opt.inputFile, opt.outputFile})
+  }
+
+  if opt.key != "" {      // decrypt file with the key
+    for _, file := range files {
+      tmpOpt := opt
+      opt.inputFile = file.i
+      opt.outputFile = file.o
+      decWithKey(tmpOpt)
+    }
+  } else {            // guess key
+    // global check
+    if opt.threadCount <= 0 {
+      log.Panic("Please provide a positive integer.")
+    } else if len(opt.bytesFormat) % 2 == 1 {
+      log.Panic("Length of bytes format should be a multiple of 2.")
+    }
+
+    // set global startTick
+    if opt.startTick < 0 {
+      opt.startTick = - opt.startTick
+    }
+    if opt.startTick > math.MaxInt32 {
+      log.Panic("Tick count should between -2147483648 and 2147483648.")
+    }
+
+    if opt.useCurTick {
+      opt.startTick = winsup.GetTickCount()
+    }
+
+    // decrypt each files
+    var tick int = opt.startTick
+    for _, file := range files {
+      tmpOpt := opt
+      tmpOpt.inputFile = file.i
+      tmpOpt.outputFile = file.o
+      // file format
+      if tmpOpt.format == "" {
+        tmpOpt.format = filepath.Ext(strings.Split(file.i, ".PROM")[0])
+        if len(tmpOpt.format) != 0 {
+          tmpOpt.format = tmpOpt.format[1:]
+        }
+      }
+      // startTick
+      if tmpOpt.reversed {
+        if tick+1800000 < tmpOpt.startTick {
+          tmpOpt.startTick = tick+1800000
         }
       } else {
-        i++
-        if i > math.MaxInt32 {
-          break
+        if tick-1800000 > tmpOpt.startTick {
+          tmpOpt.startTick = tick-1800000
         }
+      }
+
+      lastTick := int(decWithoutKey(tmpOpt, quitCh))
+      if lastTick != -1 {
+        tick = lastTick
       }
     }
   }

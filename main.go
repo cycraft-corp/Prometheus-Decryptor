@@ -32,6 +32,8 @@ import(
   "fmt"
   "strings"
   "strconv"
+  "os"
+  "os/signal"
 )
 
 var ctrLogger *log.Logger
@@ -64,12 +66,16 @@ func main(){
   bytesFormat := flag.String("b", "", "Custom search with byte value. (i.e. \\xde\\xad\\xbe\\xef -> deadbeef)\nPlease use ?? to match any byte (i.e. de??beef)")
   flag.Parse()
 
-  ctrLogger = log.New(ctrWritter{new(int)}, "", 0)
-
-  defer func(){
-    // abandon panic to prevent process exit
-    recover()
+  quitCh := make(chan bool)
+  sigCh := make(chan os.Signal, 1)
+  signal.Notify(sigCh, os.Interrupt)
+  go func(){
+      for _ = range sigCh {
+          quitCh<-true    // for jobs sender
+      }
   }()
+
+  ctrLogger = log.New(ctrWritter{new(int)}, "", 0)
 
   prometheusDecrypt(decOption{
     inputFile:    *inputFile,
@@ -82,5 +88,5 @@ func main(){
     format:       *format,
     customSearch: *customSearch,
     bytesFormat:  *bytesFormat,
-  })
+  }, quitCh)
 }
