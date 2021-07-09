@@ -46,6 +46,8 @@ type decOption struct {
   startTick     int
   reversed      bool
   useCurTick    bool
+  found         int
+  backTime      int
   key           string
   threadCount   int
   format        string
@@ -147,13 +149,17 @@ func decWithoutKey(opt decOption, quitCh chan bool) int32 {
         if opt.reversed {
           i--
           if i < 0 {
-            break
+            i = math.MaxInt32
           }
         } else {
           i++
           if i > math.MaxInt32 {
-            break
+            i = 0
           }
+        }
+
+        if i == opt.startTick {
+          end = true
         }
       }
     }
@@ -162,10 +168,15 @@ func decWithoutKey(opt decOption, quitCh chan bool) int32 {
 
   // wait for job
   var lastTick int32 = -1
+  found := 0
   go func(){
     for true {
       if tick, ok := <-result; ok {
         lastTick = tick
+        found++
+        if found == opt.found {
+          quitCh<-true
+        }
       } else {
         break
       }
@@ -222,15 +233,21 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
     } else {
       // generate all files in dir
       err = filepath.Walk(opt.inputFile, func(path string, info os.FileInfo, err error) error {
-          if !info.IsDir() {
-              path = filepath.Base(path)
-              files = append(files, struct{i string; o string}{
-                filepath.Join(opt.inputFile, path),
-                filepath.Join(opt.outputFile, path),
-              })
+        if !info.IsDir() {
+          path, err := filepath.Rel(opt.inputFile, path)
+          if err != nil {
+            return err
           }
-          return nil
+          files = append(files, struct{i string; o string}{
+            filepath.Join(opt.inputFile, path),
+            filepath.Join(opt.outputFile, path),
+          })
+        }
+        return nil
       })
+      if err != nil {
+        log.Panic("Parse path failed:", err)
+      }
     }
   } else {
     files = append(files, struct{i string; o string}{opt.inputFile, opt.outputFile})
@@ -249,6 +266,8 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
       log.Panic("Please provide a positive integer.")
     } else if len(opt.bytesFormat) % 2 == 1 {
       log.Panic("Length of bytes format should be a multiple of 2.")
+    } else if opt.found <= 0 {
+      log.Panic("Candidate found should be greater than 0.")
     }
 
     // set global startTick
@@ -263,6 +282,9 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
       opt.startTick = winsup.GetTickCount()
     }
 
+    // set backtime to millisecond
+    opt.backTime *= 1000*60
+
     // decrypt each files
     var tick int = opt.startTick
     for _, file := range files {
@@ -270,7 +292,7 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
       tmpOpt.inputFile = file.i
       tmpOpt.outputFile = file.o
       // file format
-      if tmpOpt.format == "" {
+      if tmpOpt.format == "" && tmpOpt.customSearch == "" && tmpOpt.bytesFormat == "" {
         tmpOpt.format = filepath.Ext(strings.Split(file.i, ".PROM")[0])
         if len(tmpOpt.format) != 0 {
           tmpOpt.format = tmpOpt.format[1:]
@@ -278,12 +300,12 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
       }
       // startTick
       if tmpOpt.reversed {
-        if tick+1800000 < tmpOpt.startTick {
-          tmpOpt.startTick = tick+1800000
+        if tick+tmpOpt.backTime < tmpOpt.startTick {
+          tmpOpt.startTick = tick+tmpOpt.backTime
         }
       } else {
-        if tick-1800000 > tmpOpt.startTick {
-          tmpOpt.startTick = tick-1800000
+        if tick-tmpOpt.backTime > tmpOpt.startTick {
+          tmpOpt.startTick = tick-tmpOpt.backTime
         }
       }
 

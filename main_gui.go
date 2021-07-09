@@ -75,6 +75,11 @@ type mainWindow struct {
   startTick     *walk.CheckBox
   startTickNum  *walk.NumberEdit
   useRevTick    *walk.CheckBox
+  // other strategy
+  found         *walk.CheckBox
+  foundNum      *walk.NumberEdit
+  backTime      *walk.CheckBox
+  backTimeNum   *walk.NumberEdit
   // key
   useKey        *walk.CheckBox
   decKey        *walk.LineEdit
@@ -90,6 +95,8 @@ type mainWindow struct {
   searchBytes   *walk.LineEdit
   // decrypt
   opt           decOption
+  quitCh        chan bool
+  running       bool
 }
 
 func (mw *mainWindow) selectInputFile(){
@@ -98,6 +105,18 @@ func (mw *mainWindow) selectInputFile(){
   dlg.Filter = "*.*"
 
   if _, err := dlg.ShowOpen(mw); err != nil {
+      log.Println(err)
+      return
+  }
+  mw.inputFile.SetText(dlg.FilePath)
+}
+
+func (mw *mainWindow) selectInputDir(){
+  dlg := &walk.FileDialog{}
+  dlg.Title = "Select input folder"
+  dlg.Filter = "*.*"
+
+  if _, err := dlg.ShowBrowseFolder(mw); err != nil {
       log.Println(err)
       return
   }
@@ -116,6 +135,18 @@ func (mw *mainWindow) selectOutputFile(){
   mw.outputFile.SetText(dlg.FilePath)
 }
 
+func (mw *mainWindow) selectOutputDir(){
+  dlg := &walk.FileDialog{}
+  dlg.Title = "Select output folder"
+  dlg.Filter = "*.*"
+
+  if _, err := dlg.ShowBrowseFolder(mw); err != nil {
+      log.Println(err)
+      return
+  }
+  mw.outputFile.SetText(dlg.FilePath)
+}
+
 func (mw *mainWindow) selectUseCurTick(){
   if mw.useCurTick.CheckState() == walk.CheckChecked {
     mw.startTick.SetCheckState(walk.CheckUnchecked)
@@ -128,7 +159,18 @@ func (mw *mainWindow) selectStartTick(){
   }
 }
 
+func (mw *mainWindow) nextOne(){
+  if mw.running {
+    mw.quitCh<-true
+  }
+}
+
 func (mw *mainWindow) decrypt(){
+  if mw.running {
+    log.Println("It's decrypting now.")
+    return
+  }
+
   mw.opt.inputFile = mw.inputFile.Text()
   if mw.opt.inputFile == "Input file" {
     mw.opt.inputFile = ""
@@ -161,24 +203,41 @@ func (mw *mainWindow) decrypt(){
   if mw.useBytes.CheckState() == walk.CheckChecked {
     mw.opt.bytesFormat = mw.searchBytes.Text()
   }
+  if mw.found.CheckState() == walk.CheckChecked {
+    mw.opt.found = int(mw.foundNum.Value())
+  }
+  if mw.backTime.CheckState() == walk.CheckChecked {
+    mw.opt.backTime = int(mw.backTimeNum.Value())
+  }
 
-  go prometheusDecrypt(mw.opt)
+  go func(){
+    mw.running = true
+    prometheusDecrypt(mw.opt, mw.quitCh)
+    mw.counter.SetText("Done!")
+    mw.running = false
+  }()
 }
 
 
 func main(){
-  mw := &mainWindow{opt: decOption{
-    inputFile:    "",
-    outputFile:   "",
-    startTick:    0,
-    reversed:     false,
-    useCurTick:   false,
-    key:          "",
-    threadCount:  1,
-    format:       "",
-    customSearch: "",
-    bytesFormat:  "",
-  }}
+  mw := &mainWindow{
+    opt:      decOption{
+      inputFile:    "",
+      outputFile:   "",
+      startTick:    0,
+      reversed:     false,
+      useCurTick:   false,
+      found:        1,
+      backTime:     30,
+      key:          "",
+      threadCount:  1,
+      format:       "",
+      customSearch: "",
+      bytesFormat:  "",
+    },
+    quitCh:   make(chan bool),
+    running:  false,
+  }
 
   // log to results (set after run)
   go func(){
@@ -208,8 +267,12 @@ func main(){
                 ReadOnly: true,
               },
               PushButton{
-                Text: "select",
+                Text: "select file",
                 OnClicked: mw.selectInputFile,
+              },
+              PushButton{
+                Text: "select folder",
+                OnClicked: mw.selectInputDir,
               },
             },
           },
@@ -223,8 +286,12 @@ func main(){
               },
               PushButton{
                 MaxSize: Size{100, 20},
-                Text: "select",
+                Text: "select file",
                 OnClicked: mw.selectOutputFile,
+              },
+              PushButton{
+                Text: "select folder",
+                OnClicked: mw.selectOutputDir,
               },
             },
           },
@@ -272,6 +339,38 @@ func main(){
                     Checked: false,
                     OnCheckedChanged: func(){},
                   },
+                  Composite{
+                    Layout:HBox{Alignment: AlignHNearVCenter, MarginsZero: true},
+                    Children: []Widget{
+                      CheckBox {
+                        AssignTo: &mw.found,
+                        Text: "Found candidate (default: 1)",
+                        Checked: false,
+                      },
+                      NumberEdit {
+                        MinSize: Size{Width: 150},
+                        MaxValue: math.MaxInt32,
+                        MinValue: 1,
+                        AssignTo: &mw.foundNum,
+                      },
+                    },
+                  },
+                  Composite{
+                    Layout:HBox{Alignment: AlignHNearVCenter, MarginsZero: true},
+                    Children: []Widget{
+                      CheckBox {
+                        AssignTo: &mw.backTime,
+                        Text: "Seed move back (default: 30 min)",
+                        Checked: false,
+                      },
+                      NumberEdit {
+                        MinSize: Size{Width: 150},
+                        MaxValue: math.MaxInt32/1000/60,
+                        MinValue: 1,
+                        AssignTo: &mw.backTimeNum,
+                      },
+                    },
+                  },
                 },
               },
               Composite{
@@ -285,7 +384,6 @@ func main(){
                         AssignTo: &mw.useKey,
                         Text: "Key (use this key to decrypt it directly)",
                         Checked: false,
-                        OnCheckedChanged: mw.selectStartTick,
                       },
                       LineEdit {
                         MaxSize: Size{Width: 150},
@@ -301,7 +399,6 @@ func main(){
                         AssignTo: &mw.useThread,
                         Text: "Use Thread (please input amount of thread, max: 256)",
                         Checked: false,
-                        OnCheckedChanged: mw.selectStartTick,
                       },
                       NumberEdit {
                         MaxSize: Size{Width: 150},
@@ -325,7 +422,7 @@ func main(){
                   CheckBox {
                     AssignTo: &mw.useExt,
                     Text: "Search extension",
-                    Checked: true,
+                    Checked: false,
                     OnCheckedChanged: func(){},
                   },
                   LineEdit {
@@ -378,6 +475,10 @@ func main(){
           PushButton{
             Text: "Decrypt",
             OnClicked: mw.decrypt,
+          },
+          PushButton{
+            Text: "Next one",
+            OnClicked: mw.nextOne,
           },
           TextLabel{
             AssignTo: &mw.counter,

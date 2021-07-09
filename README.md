@@ -7,17 +7,21 @@ Prometheus-Decryptor is an project to decrypt files encrypted by Prometheus rans
 
 ## Command Arguments
 ```
-Usage of ./prometheus_decrypt:
+Usage of ./bin/prometheus_decrypt:
   -b string
         Custom search with byte value. (i.e. \xde\xad\xbe\xef -> deadbeef)
         Please use ?? to match any byte (i.e. de??beef)
   -c    Use current tickcount. (only support in Windows)
   -e string
         Search file extension.
+  -f int
+        Found candidate. (default 1)
   -i string
         Input encrypted file.
   -k string
         Decrypt with this key.
+  -m int
+        Move backward m minutes from the current decrypted seed when guessing the next sample. (default 30)
   -o string
         Output decrypted file.
   -p int
@@ -26,7 +30,7 @@ Usage of ./prometheus_decrypt:
   -s string
         Custom search with regular expression.
   -t int
-        Start tickcount. (default 0)
+        Start tickcount.
 ```
 
 ## Usage
@@ -93,6 +97,19 @@ There is an additional argument:
 Custom search with bytes pattern is much more convenient than regular expression, since there are lots of file format that it can't be performed by visible characters.
 
 
+### Guess password for a directory
+Guess the password of a png file with its header in hex.
+```bash
+./prometheus_decrypt -i ./sample -o ./output -p 16 -m 1 -f 2
+```
+
+There are two additional arguments:
+- m: Move backward m minutes from the current decrypted seed when guessing the next sample. (default 30)
+  - Use `seed-m*60*1000` as the start tickcount.
+- f: Found candidate. (default 1)
+  - Limit the candidates found. There may be several candidates to a file, limit its candidates can save time.
+
+Since there are lots of files to decrypt, you can press `Ctrl-c` to skip the current guessing file.
 
 ### Output
 The output should like this. Since we match the file with magic number, it might be matched even a wrong key is provided. Therefore, we keep the decryption process continued to guess. You can terminate it anytime if you find the correct decrypted file.
@@ -105,14 +122,12 @@ The output should like this. Since we match the file with magic number, it might
 ### GUI
 We provide a GUI version for windows users. All features is supported in the GUI version. If you know nothing about programming, please follow the steps below to decrypt your files:
 
-1. Choose a file to decrypt.
-2. Choose the output file name.
-3. Select "Use thread" and fill in 16. (Threads usually make the decryption routine faster, but it actually depends on amount of your cpu cores)
-4. Select "Search extension" and fill in your file type. (For instance, PNG)
-5. Click decrypt.
-6. There is a counter, which shows the current guessing tickcount.
-7. The decrypting result will show in the text block below. (There may be multiple possible key, so the decryption routine will continue to decrypt even find a possible key. You can terminate it at any time.)
-8. Since the tickcounts (seeds) used to encrypt are near, you can try to record the seed above and select "Start tickcount" with value `seed-10000` next time. It may be faster.
+1. Choose a file or folder to decrypt.
+2. Choose the output file name or output folder.
+3. Select "Use thread" and fill in 2-4 for PC. (Threads usually make the decryption routine faster, but it actually depends on amount of your cpu cores)
+4. Click decrypt.
+5. There is a counter, which shows the current guessing tickcount.
+7. The decrypting result will show in the text block below. (There may be multiple possible key, so the decryption routine will continue to decrypt even find a possible key. You can press "Next one" to skip the current file).
 
 ![GUI](https://raw.githubusercontent.com/cycraft-corp/Prometheus-Decryptor/master/GUI.png)
 

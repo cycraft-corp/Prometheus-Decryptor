@@ -56,9 +56,11 @@ func (w ctrWritter) Write(p []byte) (n int, err error) {
 func main(){
   inputFile := flag.String("i", "", "Input encrypted file.")
   outputFile := flag.String("o", "", "Output decrypted file.")
-  startTick := flag.Int("t", 0, "Start tickcount. (default 0)")
+  startTick := flag.Int("t", 0, "Start tickcount.")
   reversed := flag.Bool("r", false, "Reversed tickcount.")
   useCurTick := flag.Bool("c", false, "Use current tickcount. (only support in Windows)")
+  found := flag.Int("f", 1, "Found candidate.")
+  backTime := flag.Int("m", 30, "Move backward m minutes from the current decrypted seed when guessing the next sample.")
   key := flag.String("k", "", "Decrypt with this key.")
   threadCount := flag.Int("p", 1, "Use n thread.")
   format := flag.String("e", "", "Search file extension.")
@@ -83,6 +85,8 @@ func main(){
     startTick:    *startTick,
     reversed:     *reversed,
     useCurTick:   *useCurTick,
+    found:        *found,
+    backTime:     *backTime,
     key:          *key,
     threadCount:  *threadCount,
     format:       *format,
