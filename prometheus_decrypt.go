@@ -86,12 +86,19 @@ func writeFile(data []byte, path string, seed int32, key string) error {
 func decRoutine(jobs chan int32, result chan int32, file []byte, output string, exam *examine.TypeExam, wg *sync.WaitGroup) {
   defer wg.Done()
   plain := make([]byte, len(file))
+  maxSize := len(file)
+  // we are only interested in decrypting/matching the first 262 bytes (max file header according to github.com/h2non/filetype)
+  if maxSize > 261 {
+    maxSize = 261
+  }
   for{
     if seed, ok := <-jobs; ok {
       go ctrLogger.Printf("\r%d", seed)
       key := genKey(seed)
-      salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
+      salsa20.XORKeyStream(plain, file[0:maxSize], []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
       if exam.Match(plain) {
+        // the file header matches -> decrypt the whole file now
+        salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
         err := writeFile(plain, output, seed, string(key[:]))
         if err != nil {
           log.Println(err)
