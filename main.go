@@ -60,7 +60,8 @@ func main(){
   reversed := flag.Bool("r", false, "Reversed tickcount.")
   useCurTick := flag.Bool("c", false, "Use current tickcount. (only support in Windows)")
   found := flag.Int("f", 1, "Found candidate.")
-  backTime := flag.Int("m", 30, "Move backward m minutes from the current decrypted seed when guessing the next sample.")
+  backTime := flag.Int("m", 10, "Move backward m minutes from the current decrypted seed when guessing the next sample.")
+  decSize := flag.Int("d", -1, "Decrypt size when guessing. The default size is 100, and you can specify your own size corresponding to your search pattern.\n0 stands for the guessing file size, and -1 stands for the max header size 100 except for Microsoft documents.")
   key := flag.String("k", "", "Decrypt with this key.")
   threadCount := flag.Int("p", 1, "Use n thread.")
   format := flag.String("e", "", "Search file extension.")
@@ -87,6 +88,7 @@ func main(){
     useCurTick:   *useCurTick,
     found:        *found,
     backTime:     *backTime,
+    decSize:      *decSize,
     key:          *key,
     threadCount:  *threadCount,
     format:       *format,

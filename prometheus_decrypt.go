@@ -48,12 +48,15 @@ type decOption struct {
   useCurTick    bool
   found         int
   backTime      int
+  decSize       int
   key           string
   threadCount   int
   format        string
   customSearch  string
   bytesFormat   string
 }
+
+const HEADER_MAX_SIZE = 100     // except document
 
 func genKey(seed int32) [32]byte {
   var key [32]byte
@@ -83,15 +86,17 @@ func writeFile(data []byte, path string, seed int32, key string) error {
   return err
 }
 
-func decRoutine(jobs chan int32, result chan int32, file []byte, output string, exam *examine.TypeExam, wg *sync.WaitGroup) {
+func decRoutine(jobs chan int32, result chan int32, file []byte, output string, exam *examine.TypeExam, wg *sync.WaitGroup, decSize int) {
   defer wg.Done()
   plain := make([]byte, len(file))
   for{
     if seed, ok := <-jobs; ok {
-      go ctrLogger.Printf("\r%d", seed)
+      ctrLogger.Printf("\r%d", seed)
       key := genKey(seed)
-      salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
+      salsa20.XORKeyStream(plain, file[0:decSize], []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
       if exam.Match(plain) {
+        // the file header matches -> decrypt the whole file now
+        salsa20.XORKeyStream(plain, file, []byte{1, 2, 3, 4, 5, 6, 7, 8}, &key)
         err := writeFile(plain, output, seed, string(key[:]))
         if err != nil {
           log.Println(err)
@@ -127,13 +132,32 @@ func decWithoutKey(opt decOption, quitCh chan bool) int32 {
     log.Panic(err)
   }
 
+  // check decrypt size
+  switch opt.decSize {
+  case -1:                    // max header size according to github.com/h2non/filetype)
+    if opt.format == "docx" || opt.format == "xlsx" || opt.format == "pptx" {
+      opt.decSize = len(file)
+    } else {
+      opt.decSize = HEADER_MAX_SIZE
+    }
+  case 0:                     // full file size
+    opt.decSize = len(file)
+  default:
+    if opt.decSize < 0 {
+      opt.decSize = - opt.decSize
+    }
+  }
+  if opt.decSize > len(file) {
+    opt.decSize = len(file)
+  }
+
   // start worker
   var wg sync.WaitGroup
   wg.Add(opt.threadCount)
   jobs := make(chan int32, opt.threadCount)
   result := make(chan int32, opt.threadCount)
   for i:=0; i<opt.threadCount; i++ {
-    go decRoutine(jobs, result, file, opt.outputFile, exam, &wg)
+    go decRoutine(jobs, result, file, opt.outputFile, exam, &wg, opt.decSize)
   }
 
   // send job (seed)
@@ -298,6 +322,7 @@ func prometheusDecrypt(opt decOption, quitCh chan bool){
           tmpOpt.format = tmpOpt.format[1:]
         }
       }
+      tmpOpt.format = strings.ToLower(tmpOpt.format)
       // startTick
       if tmpOpt.reversed {
         if tick+tmpOpt.backTime < tmpOpt.startTick {
