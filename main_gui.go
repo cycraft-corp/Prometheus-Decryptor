@@ -80,6 +80,8 @@ type mainWindow struct {
   foundNum      *walk.NumberEdit
   backTime      *walk.CheckBox
   backTimeNum   *walk.NumberEdit
+  decSize       *walk.CheckBox
+  decSizeNum    *walk.NumberEdit
   // key
   useKey        *walk.CheckBox
   decKey        *walk.LineEdit
@@ -209,6 +211,9 @@ func (mw *mainWindow) decrypt(){
   if mw.backTime.CheckState() == walk.CheckChecked {
     mw.opt.backTime = int(mw.backTimeNum.Value())
   }
+  if mw.decSize.CheckState() == walk.CheckChecked {
+    mw.opt.decSize = int(mw.decSizeNum.Value())
+  }
 
   go func(){
     mw.running = true
@@ -228,7 +233,8 @@ func main(){
       reversed:     false,
       useCurTick:   false,
       found:        1,
-      backTime:     30,
+      backTime:     10,
+      decSize:      -1,
       key:          "",
       threadCount:  1,
       format:       "",
@@ -360,7 +366,7 @@ func main(){
                     Children: []Widget{
                       CheckBox {
                         AssignTo: &mw.backTime,
-                        Text: "Seed move back (default: 30 min)",
+                        Text: "Seed move back (default: 10 min)",
                         Checked: false,
                       },
                       NumberEdit {
@@ -368,6 +374,20 @@ func main(){
                         MaxValue: math.MaxInt32/1000/60,
                         MinValue: 1,
                         AssignTo: &mw.backTimeNum,
+                      },
+                    },
+                  },
+                  Composite{
+                    Layout:HBox{Alignment: AlignHNearVCenter, MarginsZero: true},
+                    Children: []Widget{
+                      CheckBox {
+                        AssignTo: &mw.decSize,
+                        Text: "Decrypt size (default: 100)",
+                        Checked: false,
+                      },
+                      NumberEdit {
+                        MinSize: Size{Width: 150},
+                        AssignTo: &mw.decSizeNum,
                       },
                     },
                   },

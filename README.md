@@ -12,6 +12,9 @@ Usage of ./bin/prometheus_decrypt:
         Custom search with byte value. (i.e. \xde\xad\xbe\xef -> deadbeef)
         Please use ?? to match any byte (i.e. de??beef)
   -c    Use current tickcount. (only support in Windows)
+  -d int
+        Decrypt size when guessing. The default size is 100, and you can specify your own size corresponding to your search pattern.
+        0 stands for the guessing file size, and -1 stands for the max header size 100 except for Microsoft documents. (default -1)
   -e string
         Search file extension.
   -f int
@@ -77,22 +80,24 @@ There is an additional argument:
 ### Guess password with custom format (regular expression)
 Guess the password of a text file with a known string "we had another great".
 ```bash
-./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great"
+./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -s "we had another great" -d 0
 ```
 
-There is an additional argument:
+There are two additional arguments:
 - s: regular expression to match the decrypted file
+- d: the decrypted size when guessing. It's default value is 100. Since the custom search pattern is not limited to first 100 bytes, we use 0 here to decrypt the whole files.
 
 ### Guess password with custom format (bytes pattern)
 Guess the password of a png file with its header in hex.
 ```bash
-./prometheus_decrypt -i ./sample/test.txt.enc -o ./output/test.txt -p 16 -b '89??4e??0d??1a0a??00'
+./prometheus_decrypt -i ./sample/CyCraft.png.PROM[prometheushelp@mail.ch] -o ./output/CyCraft.png -p 16 -b '89??4e??0d??1a0a??00' -d 10
 ```
 
 There is an additional argument:
 - b: PNG header in hex format.
   - The full bytes are "8950 4e47 0d0a 1a0a 0000".
   - We can use ?? to match any byte.
+- d: since the pattern is the first 10 bytes of png files, we can specify 10 here to enhance the drcryption speed.
 
 Custom search with bytes pattern is much more convenient than regular expression, since there are lots of file format that it can't be performed by visible characters.
 
